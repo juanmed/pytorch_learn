@@ -71,3 +71,58 @@ print(out)
 # Zero the gradients and fill brackpropagation with random gradients
 net.zero_grad()
 out.backward(torch.randn(1,10))
+
+# Define a loss function
+print("\n\n# *********************************** #\n"+
+      "#             LOSS FUNCTION               #\n"+
+      "# *********************************** #\n")
+output = net(inp)
+print("Output prediction values \n{}".format(output))
+target = torch.randn(10)  # a dummy target, it is a column vector, we need row bector
+target = target.view(1,-1)  # we need a row vector, to match the output shape
+print(" Dummy target ground truth \n{}".format(target))
+
+loss_function = nn.MSELoss()     # Loss is Mean Squared Root 
+loss = loss_function(output, target) 
+print("Loss is {}".format(loss))
+
+
+print(loss.grad_fn)  # MSELoss
+print(loss.grad_fn.next_functions[0][0])  # Linear
+print(loss.grad_fn.next_functions[0][0].next_functions[0][0])  # ReLU
+
+# Backpropagate the gradient
+print("\n\n# *********************************** #\n"+
+      "#         BACK PROPAGATION           #\n"+
+      "# *********************************** #\n")
+
+net.zero_grad()  # zero the gradient buffers for all parameters, if not they will accumulate
+print("conv1.bias.grad before backward \n {}".format(net.conv1.bias.grad))
+loss.backward()  # do backward propagation
+print("conv1.bias.grad after backward \n {}".format(net.conv1.bias.grad))
+
+# Update weights
+print("\n\n# *********************************** #\n"+
+      "#         UPDATE WEIGHTS              #\n"+
+      "# *********************************** #\n")
+
+
+# There are 2 ways. One is this:
+
+learn_rate = 0.01
+for f in net.parameters():
+    f.data.sub_(f.grad.data * learn_rate)
+
+# The second one
+import torch.optim as optim
+
+# create optimizer 
+optimizer = optim.SGD(net.parameters(), lr = 0.01)
+
+# this should go in the training loop
+optimizer.zero_grad()      # zero the gradient buffers
+output = net(inp)        # forward pass
+loss = loss_function(output, target)         # calculate loss
+loss.backward()
+optimizer.step()           # Does the actual update of the weights
+
